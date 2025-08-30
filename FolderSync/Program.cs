@@ -16,13 +16,16 @@ namespace FolderSync
 
             using PeriodicTimer timer = new PeriodicTimer(syncInterval);
 
-            while (await timer.WaitForNextTickAsync())
+            do
             {
                 var sourceInfo = GetFilesInfo(pathSourceFolder);
                 var replicaInfo = GetFilesInfo(pathReplicaFolder);
                             
                 CopyNewFiles(FileNameParse(sourceInfo), FileNameParse(replicaInfo), pathSourceFolder, pathReplicaFolder, pathLogFolder);
-            }
+                DeleteOldFiles(FileNameParse(sourceInfo), FileNameParse(replicaInfo), pathSourceFolder, pathReplicaFolder, pathLogFolder);
+                UpdateFiles(FileNameParse(sourceInfo), FileNameParse(replicaInfo), pathSourceFolder, pathReplicaFolder, pathLogFolder);
+
+            } while (await timer.WaitForNextTickAsync());
         }
 
         static Dictionary<string, string>? GetFilesInfo(string folderPath)
@@ -75,7 +78,8 @@ namespace FolderSync
             return outputDictionary;
         }
 
-        static void CopyNewFiles(Dictionary<string, string> source, Dictionary<string, string> replica, string sourcePath, string replicaPath, string logPath)
+        static void CopyNewFiles(Dictionary<string, string> source, Dictionary<string, string> replica,
+            string sourcePath, string replicaPath, string logPath)
         {
             foreach (var element in source)
             {
@@ -83,18 +87,46 @@ namespace FolderSync
                 {
                     File.Copy(sourcePath + element.Key, replicaPath + element.Key);
                     string logText = $"Copied {element.Key} into the {replicaPath} folder.";
-                    Console.WriteLine(logText);
-                    LogTextToFile(logText, logPath);
+                    LogTextToFileAndConsole(logText, logPath);
+                }
+            }
+        }
+        
+        static void DeleteOldFiles(Dictionary<string, string> source, Dictionary<string, string> replica, 
+            string sourcePath, string replicaPath, string logPath)
+        {
+            foreach (var element in replica)
+            {
+                if (!source.ContainsKey(element.Key))
+                {
+                    File.Delete(replicaPath + element.Key);
+                    string logText = $"Deleted {element.Key} from the {replicaPath} folder.";
+                    LogTextToFileAndConsole(logText, logPath);
                 }
             }
         }
 
-        static void LogTextToFile(string text, string pathLog)
+        static void UpdateFiles(Dictionary<string, string> source, Dictionary<string, string> replica,
+            string sourcePath, string replicaPath, string logPath)
+        {
+            foreach (var element in source)
+            {
+                if (replica.ContainsKey(element.Key) && element.Value != replica[element.Key])
+                {
+                    File.Replace(sourcePath + element.Key, replicaPath + element.Key, null);
+                    string logText = $"Updated {element.Key} into the {replicaPath} folder.";
+                    LogTextToFileAndConsole(logText, logPath);
+                }
+            }
+        }
+
+        static void LogTextToFileAndConsole(string text, string pathLog)
         {
             using (StreamWriter sw = new StreamWriter(Path.Combine(pathLog, "log.txt"), true))
             {
                 sw.WriteLine($"{DateTime.Now}  --  {text}");
             }
+            Console.WriteLine(text);
         }
     }
 }
