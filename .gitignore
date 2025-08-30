@@ -416,3 +416,18 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ---- JetBrains Rider (IntelliJ-based IDE) ----
+.idea/
+*.iml
+out/
+
+# Rider caches (can be large, regenerate automatically)
+.idea/.idea.*  
+.idea/*  
+*.ipr  
+
+# ---- macOS system files ----
+.DS_Store
+.AppleDouble
+.LSOverride
