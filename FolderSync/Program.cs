@@ -1,25 +1,28 @@
-﻿using System;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 
 namespace FolderSync
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             string pathSourceFolder = args[0];
             string pathReplicaFolder = args[1];
             string pathLogFolder = args[2];
-            TimeSpan interval = TimeSpan.Parse(args[3]);
+            TimeSpan syncInterval = TimeSpan.Parse(args[3]);
             
-            Console.WriteLine($"Sync every {interval}");
+            Console.WriteLine($"This program synchronize folder every {syncInterval} (HH:MM:SS).");
 
-            var sourceInfo = GetFilesInfo(pathSourceFolder);
-            var replicaInfo = GetFilesInfo(pathReplicaFolder);
-            CopyNewFiles(FileNameParse(sourceInfo), FileNameParse(replicaInfo), pathSourceFolder, pathReplicaFolder);
+            using PeriodicTimer timer = new PeriodicTimer(syncInterval);
 
-            Console.ReadKey();
+            while (await timer.WaitForNextTickAsync())
+            {
+                var sourceInfo = GetFilesInfo(pathSourceFolder);
+                var replicaInfo = GetFilesInfo(pathReplicaFolder);
+                            
+                CopyNewFiles(FileNameParse(sourceInfo), FileNameParse(replicaInfo), pathSourceFolder, pathReplicaFolder, pathLogFolder);
+            }
         }
 
         static Dictionary<string, string>? GetFilesInfo(string folderPath)
@@ -66,21 +69,31 @@ namespace FolderSync
             foreach (var element in inputDictionary)
             {
                 string[] parts = element.Key.Split('/');
-                outputDictionary.Add(parts[parts.Length - 1], element.Value);
+                outputDictionary.Add(parts[^1], element.Value);
             }
 
             return outputDictionary;
         }
 
-        static void CopyNewFiles(Dictionary<string, string> source, Dictionary<string, string> replica, string sourcePath, string replicaPath)
+        static void CopyNewFiles(Dictionary<string, string> source, Dictionary<string, string> replica, string sourcePath, string replicaPath, string logPath)
         {
             foreach (var element in source)
             {
                 if (!replica.ContainsKey(element.Key))
                 {
                     File.Copy(sourcePath + element.Key, replicaPath + element.Key);
-                    Console.WriteLine($"Copied {element} to {replicaPath} folder.");
+                    string logText = $"Copied {element.Key} into the {replicaPath} folder.";
+                    Console.WriteLine(logText);
+                    LogTextToFile(logText, logPath);
                 }
+            }
+        }
+
+        static void LogTextToFile(string text, string pathLog)
+        {
+            using (StreamWriter sw = new StreamWriter(Path.Combine(pathLog, "log.txt"), true))
+            {
+                sw.WriteLine($"{DateTime.Now}  --  {text}");
             }
         }
     }
