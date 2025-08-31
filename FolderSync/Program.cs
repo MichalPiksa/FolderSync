@@ -21,9 +21,9 @@ namespace FolderSync
                 var sourceInfo = GetFilesInfo(pathSourceFolder);
                 var replicaInfo = GetFilesInfo(pathReplicaFolder);
                             
-                CopyNewFiles(FileNameParse(sourceInfo), FileNameParse(replicaInfo), pathSourceFolder, pathReplicaFolder, pathLogFolder);
-                DeleteOldFiles(FileNameParse(sourceInfo), FileNameParse(replicaInfo), pathSourceFolder, pathReplicaFolder, pathLogFolder);
-                UpdateFiles(FileNameParse(sourceInfo), FileNameParse(replicaInfo), pathSourceFolder, pathReplicaFolder, pathLogFolder);
+                CopyNewFiles(sourceInfo, replicaInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
+                DeleteOldFiles(sourceInfo, replicaInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
+                UpdateFiles(sourceInfo, replicaInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
 
             } while (await timer.WaitForNextTickAsync());
         }
@@ -32,14 +32,14 @@ namespace FolderSync
         {
             try
             {
-                Dictionary<string, string> filesDir = new Dictionary<string, string>();
-                var files = Directory.GetFiles(folderPath);
-                for (int i = 0; i < files.Length; i++)
+                Dictionary<string, string> filesDict = new Dictionary<string, string>();
+                var files = Directory.EnumerateFiles(folderPath, "*", SearchOption.AllDirectories);
+                foreach (var file in files)
                 {
-                    filesDir.Add(files[i], GetMD5(files[i]));
+                    filesDict.Add(Path.GetRelativePath(folderPath, file), GetMD5(file));
                 }
                 
-                return filesDir;
+                return filesDict;
             }
             catch (DirectoryNotFoundException e)
             {
@@ -66,18 +66,6 @@ namespace FolderSync
             }
         }
 
-        static Dictionary<string, string> FileNameParse(Dictionary<string, string> inputDictionary)
-        {
-            var outputDictionary = new Dictionary<string, string>();
-            foreach (var element in inputDictionary)
-            {
-                string[] parts = element.Key.Split('/');
-                outputDictionary.Add(parts[^1], element.Value);
-            }
-
-            return outputDictionary;
-        }
-
         static void CopyNewFiles(Dictionary<string, string> source, Dictionary<string, string> replica,
             string sourcePath, string replicaPath, string logPath)
         {
@@ -85,6 +73,15 @@ namespace FolderSync
             {
                 if (!replica.ContainsKey(element.Key))
                 {
+                    if (element.Key.Split('/').Length > 1)
+                    {
+                        string subfolderName = replicaPath + element.Key.Split('/')[^2];
+                        if (!Directory.Exists(subfolderName))
+                        {
+                            Directory.CreateDirectory(subfolderName);
+                            LogTextToFileAndConsole($"Folder {element.Key.Split('/')[^2]} created.", subfolderName);
+                        }
+                    }
                     File.Copy(sourcePath + element.Key, replicaPath + element.Key);
                     string logText = $"Copied {element.Key} into the {replicaPath} folder.";
                     LogTextToFileAndConsole(logText, logPath);
@@ -126,7 +123,7 @@ namespace FolderSync
             {
                 sw.WriteLine($"{DateTime.Now}  --  {text}");
             }
-            Console.WriteLine(text);
+            Console.WriteLine($"{DateTime.Now}  --  {text}");
         }
     }
 }
