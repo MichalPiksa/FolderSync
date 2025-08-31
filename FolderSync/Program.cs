@@ -10,6 +10,12 @@ namespace FolderSync
             string pathSourceFolder = args[0];
             string pathReplicaFolder = args[1];
             string pathLogFolder = args[2];
+            
+            if (!Directory.Exists(pathLogFolder))
+            {
+                throw new ArgumentException($"Directory {pathLogFolder} not found.");
+            }
+            
             TimeSpan syncInterval = TimeSpan.Parse(args[3]);
             
             Console.WriteLine($"This program synchronize folder every {syncInterval} (HH:MM:SS).");
@@ -43,8 +49,7 @@ namespace FolderSync
             }
             catch (DirectoryNotFoundException e)
             {
-                Console.WriteLine($"Directory {folderPath} not found. {e.Message}");
-                return null;
+                throw new ArgumentException($"Directory {folderPath} not found.", e);
             }
         }
 
