@@ -24,12 +24,14 @@ namespace FolderSync
 
             do
             {
-                var sourceInfo = GetFilesInfo(pathSourceFolder);
-                var replicaInfo = GetFilesInfo(pathReplicaFolder);
-                            
-                CopyNewFiles(sourceInfo, replicaInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
-                DeleteOldFiles(sourceInfo, replicaInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
-                UpdateFiles(sourceInfo, replicaInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
+                DeleteOldFolders(pathSourceFolder, pathReplicaFolder, pathLogFolder);
+                
+                var sourceFilesInfo = GetFilesInfo(pathSourceFolder);
+                var replicaFilesInfo = GetFilesInfo(pathReplicaFolder);
+                
+                CopyNewFiles(sourceFilesInfo, replicaFilesInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
+                DeleteOldFiles(sourceFilesInfo, replicaFilesInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
+                UpdateFiles(sourceFilesInfo, replicaFilesInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
 
             } while (await timer.WaitForNextTickAsync());
         }
@@ -78,17 +80,10 @@ namespace FolderSync
             {
                 if (!replica.ContainsKey(element.Key))
                 {
-                    if (element.Key.Split('/').Length > 1)
-                    {
-                        string subfolderName = replicaPath + element.Key.Split('/')[^2];
-                        if (!Directory.Exists(subfolderName))
-                        {
-                            Directory.CreateDirectory(subfolderName);
-                            LogTextToFileAndConsole($"Folder {element.Key.Split('/')[^2]} created.", subfolderName);
-                        }
-                    }
-                    File.Copy(sourcePath + element.Key, replicaPath + element.Key);
-                    string logText = $"Copied {element.Key} into the {replicaPath} folder.";
+                    string replicaAbsolutePath = Path.Combine(replicaPath, element.Key);
+                    Directory.CreateDirectory(Path.GetDirectoryName(replicaAbsolutePath));
+                    File.Copy(Path.Combine(sourcePath, element.Key), replicaAbsolutePath);
+                    string logText = $"Copied {element.Key} into the {replicaAbsolutePath} folder.";
                     LogTextToFileAndConsole(logText, logPath);
                 }
             }
@@ -101,7 +96,7 @@ namespace FolderSync
             {
                 if (!source.ContainsKey(element.Key))
                 {
-                    File.Delete(replicaPath + element.Key);
+                    File.Delete(Path.Combine(replicaPath, element.Key));
                     string logText = $"Deleted {element.Key} from the {replicaPath} folder.";
                     LogTextToFileAndConsole(logText, logPath);
                 }
@@ -115,7 +110,7 @@ namespace FolderSync
             {
                 if (replica.ContainsKey(element.Key) && element.Value != replica[element.Key])
                 {
-                    File.Replace(sourcePath + element.Key, replicaPath + element.Key, null);
+                    File.Replace(Path.Combine(sourcePath, element.Key), Path.Combine(replicaPath, element.Key) , null);
                     string logText = $"Updated {element.Key} into the {replicaPath} folder.";
                     LogTextToFileAndConsole(logText, logPath);
                 }
@@ -129,6 +124,23 @@ namespace FolderSync
                 sw.WriteLine($"{DateTime.Now}  --  {text}");
             }
             Console.WriteLine($"{DateTime.Now}  --  {text}");
+        }
+
+        static void DeleteOldFolders(string sourcePath, string replicaPath, string logPath)
+        {
+            var sourceDirectories = Directory.GetDirectories(sourcePath, "*",  SearchOption.AllDirectories)
+                .Select(x => Path.GetRelativePath(sourcePath, x));
+            var replicaDirectories = Directory.GetDirectories(replicaPath, "*",  SearchOption.AllDirectories)
+                .Select(x => Path.GetRelativePath(replicaPath, x));
+            foreach (var relativeFolderPath in replicaDirectories.OrderByDescending(y => y.Split(Path.DirectorySeparatorChar).Length))
+            {
+                if (!sourceDirectories.Contains(relativeFolderPath))
+                {
+                    Directory.Delete(Path.Combine(replicaPath, relativeFolderPath), true);
+                    string logText = $"Deleted folder {Path.Combine(replicaPath, relativeFolderPath)}";
+                    LogTextToFileAndConsole(logText, logPath);
+                }
+            }
         }
     }
 }
