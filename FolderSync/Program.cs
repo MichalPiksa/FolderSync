@@ -30,13 +30,13 @@ namespace FolderSync
                 var replicaFilesInfo = GetFilesInfo(pathReplicaFolder);
                 
                 CopyNewFiles(sourceFilesInfo, replicaFilesInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
-                DeleteOldFiles(sourceFilesInfo, replicaFilesInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
+                DeleteOldFiles(sourceFilesInfo, replicaFilesInfo, pathReplicaFolder, pathLogFolder);
                 UpdateFiles(sourceFilesInfo, replicaFilesInfo, pathSourceFolder, pathReplicaFolder, pathLogFolder);
 
             } while (await timer.WaitForNextTickAsync());
         }
 
-        static Dictionary<string, string>? GetFilesInfo(string folderPath)
+        static Dictionary<string, string> GetFilesInfo(string folderPath)
         {
             try
             {
@@ -89,8 +89,7 @@ namespace FolderSync
             }
         }
         
-        static void DeleteOldFiles(Dictionary<string, string> source, Dictionary<string, string> replica, 
-            string sourcePath, string replicaPath, string logPath)
+        static void DeleteOldFiles(Dictionary<string, string> source, Dictionary<string, string> replica, string replicaPath, string logPath)
         {
             foreach (var element in replica)
             {
