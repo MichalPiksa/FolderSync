@@ -35,7 +35,7 @@ dotnet run -- <pathSourceFolder> <pathReplicaFolder> <pathLogFolder> <syncInterv
 
 ### Example
 ```bash
-dotnet run -- /Users/name/Downloads/sync_test/source  /Users/name/Downloads/sync_test/replica  /Users/name/Downloads/sync_test/log.txt  0:30:00
+dotnet run -- /Users/name/Downloads/sync_test/source  /Users/name/Downloads/sync_test/replica  /Users/name/Downloads/sync_test/  0:30:00
 ```
 
 This will:
