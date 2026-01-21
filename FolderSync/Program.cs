@@ -1,7 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-
-namespace FolderSync
+﻿namespace FolderSync
 {
     class Program
     {
@@ -41,24 +38,6 @@ namespace FolderSync
                 syncService.Synchronize();
 
             } while (await timer.WaitForNextTickAsync());
-        }
-        
-        static string GetMD5(string filePath)
-        {
-            using (var md5 = MD5.Create())
-            {
-                using (var content = File.OpenRead(filePath))
-                {
-                    byte[] hashBytes = md5.ComputeHash(content);
-                    StringBuilder sb = new StringBuilder();
-                    foreach (byte hashByte in hashBytes)
-                    {
-                        sb.Append(hashByte.ToString());
-                    }
-                    
-                    return sb.ToString();
-                }
-            }
         }
     }
 }
