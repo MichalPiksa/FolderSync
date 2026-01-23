@@ -1,5 +1,3 @@
-using System.IO;
-
 namespace FolderSync;
 
 internal static class FileComparer
